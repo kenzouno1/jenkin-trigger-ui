@@ -1,0 +1,23 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - backend-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/data.db
+
+volumes:
+  backend-data:

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+plans/
+docs/
+backend/.venv
+backend/venv
+backend/__pycache__
+backend/*.db
+.env*.local
+.vscode
+.idea
