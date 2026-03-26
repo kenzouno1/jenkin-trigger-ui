@@ -82,6 +82,17 @@ def extract_standard_params(detail: dict) -> list[dict]:
     return []
 
 
+def fetch_views(settings: Settings) -> list[dict]:
+    """Fetch Jenkins views with their job names."""
+    data = _jenkins_get_json(settings, "/api/json?tree=views[name,url,jobs[name]]")
+    views = data.get("views", [])
+    return [
+        {"name": v.get("name", ""), "jobs": [j["name"] for j in v.get("jobs", []) if "name" in j]}
+        for v in views
+        if v.get("name") != "all" and v.get("name") != "All"
+    ]
+
+
 def fetch_queue(settings: Settings) -> list[dict]:
     """Fetch Jenkins build queue items."""
     data = _jenkins_get_json(

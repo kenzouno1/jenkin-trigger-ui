@@ -11,6 +11,7 @@ import { RecentBuildsTable } from "@/components/recent-builds-table";
 import { useJobs } from "@/hooks/use-jobs";
 import { useAuth } from "@/hooks/use-auth";
 import { AdminPanel } from "@/components/admin/admin-panel";
+import { ChangePasswordDialog } from "@/components/change-password-dialog";
 import { colorToStatus } from "@/lib/jenkins-types";
 import {
   Beaker,
@@ -29,6 +30,7 @@ export default function HomePage() {
   } | null>(null);
   const [historyJob, setHistoryJob] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const { data: jobs } = useJobs();
   const { user, logout } = useAuth();
 
@@ -132,7 +134,11 @@ export default function HomePage() {
             >
               <LogOut className="w-4 h-4" />
             </button>
-            <button className="w-8 h-8 rounded-md bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition">
+            <button
+              onClick={() => setShowChangePassword(true)}
+              title="Đổi mật khẩu"
+              className="w-8 h-8 rounded-md bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition"
+            >
               <Settings className="w-4 h-4" />
             </button>
           </div>
@@ -219,6 +225,12 @@ export default function HomePage() {
         open={!!triggerJob}
         onClose={() => setTriggerJob(null)}
         onTriggered={handleTriggered}
+      />
+
+      {/* Change password dialog */}
+      <ChangePasswordDialog
+        open={showChangePassword}
+        onOpenChange={setShowChangePassword}
       />
     </div>
   );

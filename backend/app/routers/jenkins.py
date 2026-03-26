@@ -30,6 +30,17 @@ def _require_trigger(db: Session, user: User, job_name: str) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to trigger this job")
 
 
+@router.get("/views")
+def list_views(
+    current_user: User = Depends(get_current_user),
+):
+    """List Jenkins views (job groups)."""
+    try:
+        return jenkins_service.fetch_views(settings)
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+
+
 @router.get("/queue")
 def get_queue(
     current_user: User = Depends(get_current_user),

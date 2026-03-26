@@ -21,6 +21,23 @@ export function useJobs() {
   });
 }
 
+export interface JenkinsView {
+  name: string;
+  jobs: string[];
+}
+
+export function useJenkinsViews() {
+  return useQuery<JenkinsView[]>({
+    queryKey: ["jenkins-views"],
+    queryFn: async () => {
+      const res = await fetch("/api/jenkins/views", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch views");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+}
+
 export function useJobDetail(name: string | null) {
   return useQuery<JobDetailWithParams>({
     queryKey: ["jenkins-job", name],

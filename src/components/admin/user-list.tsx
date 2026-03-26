@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserFormModal } from "./user-form-modal";
+import { ResetPasswordModal } from "./reset-password-modal";
 import { useUsers, useUpdateUser, type AdminUser } from "@/hooks/use-admin";
-import { UserPlus, Pencil, AlertCircle } from "lucide-react";
+import { UserPlus, Pencil, KeyRound, AlertCircle } from "lucide-react";
 
 export function UserList() {
   const { data: users, isLoading, error } = useUsers();
   const updateUser = useUpdateUser();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
 
   const handleEdit = (user: AdminUser) => {
     setEditTarget(user);
@@ -100,12 +102,23 @@ export function UserList() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className={`h-7 px-2 text-xs ${user.is_active ? "text-red-400 hover:text-red-300" : "text-green-400 hover:text-green-300"}`}
-                            onClick={() => handleToggleActive(user)}
-                            disabled={updateUser.isPending}
+                            className="h-7 px-2 text-zinc-400 hover:text-yellow-300"
+                            onClick={() => setResetTarget(user)}
+                            title="Reset password"
                           >
-                            {user.is_active ? "Deactivate" : "Activate"}
+                            <KeyRound className="h-3.5 w-3.5" />
                           </Button>
+                          {user.role !== "admin" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={`h-7 px-2 text-xs ${user.is_active ? "text-red-400 hover:text-red-300" : "text-green-400 hover:text-green-300"}`}
+                              onClick={() => handleToggleActive(user)}
+                              disabled={updateUser.isPending}
+                            >
+                              {user.is_active ? "Deactivate" : "Activate"}
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -124,6 +137,12 @@ export function UserList() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editUser={editTarget}
+      />
+
+      <ResetPasswordModal
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        user={resetTarget}
       />
     </>
   );

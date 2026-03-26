@@ -4,10 +4,10 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "./job-card";
-import { useJobs } from "@/hooks/use-jobs";
+import { useJobs, useJenkinsViews } from "@/hooks/use-jobs";
 import { colorToStatus } from "@/lib/jenkins-types";
 import type { JobStatus } from "@/lib/jenkins-types";
-import { Search, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, AlertCircle, RefreshCw, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,20 +28,26 @@ const statusFilters: JobStatus[] = [
 
 export function JobList({ onTrigger, onViewBuild, onViewHistory }: JobListProps) {
   const { data: jobs, isLoading, error, refetch } = useJobs();
+  const { data: views } = useJenkinsViews();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobStatus | null>(null);
+  const [activeView, setActiveView] = useState<string | null>(null);
+
+  const viewJobNames = useMemo(() => {
+    if (!activeView || !views) return null;
+    const view = views.find((v) => v.name === activeView);
+    return view ? new Set(view.jobs) : null;
+  }, [activeView, views]);
 
   const filtered = useMemo(() => {
     if (!jobs) return [];
     return jobs.filter((j) => {
-      const matchesSearch = j.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchesFilter =
-        !activeFilter || colorToStatus(j.color) === activeFilter;
-      return matchesSearch && matchesFilter;
+      const matchesSearch = j.name.toLowerCase().includes(search.toLowerCase());
+      const matchesFilter = !activeFilter || colorToStatus(j.color) === activeFilter;
+      const matchesView = !viewJobNames || viewJobNames.has(j.name);
+      return matchesSearch && matchesFilter && matchesView;
     });
-  }, [jobs, search, activeFilter]);
+  }, [jobs, search, activeFilter, viewJobNames]);
 
   if (error) {
     return (
@@ -58,6 +64,44 @@ export function JobList({ onTrigger, onViewBuild, onViewHistory }: JobListProps)
 
   return (
     <div className="space-y-4">
+      {/* View tabs */}
+      {views && views.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 border-b border-zinc-800">
+          <button
+            onClick={() => setActiveView(null)}
+            className={`relative px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              activeView === null ? "text-blue-400" : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <FolderOpen className="w-4 h-4" />
+              All
+            </span>
+            {activeView === null && (
+              <div className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-blue-400 rounded-sm" />
+            )}
+          </button>
+          {views.map((view) => (
+            <button
+              key={view.name}
+              onClick={() => setActiveView(activeView === view.name ? null : view.name)}
+              className={`relative px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                activeView === view.name ? "text-blue-400" : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <FolderOpen className="w-4 h-4" />
+                {view.name}
+                <span className="text-xs text-zinc-500">({view.jobs.length})</span>
+              </span>
+              {activeView === view.name && (
+                <div className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-blue-400 rounded-sm" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search and filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
@@ -86,19 +130,17 @@ export function JobList({ onTrigger, onViewBuild, onViewHistory }: JobListProps)
           className="cursor-pointer"
           onClick={() => setActiveFilter(null)}
         >
-          All {jobs?.length ? `(${jobs.length})` : ""}
+          All {filtered.length ? `(${filtered.length})` : ""}
         </Badge>
         {statusFilters.map((s) => {
-          const count = jobs?.filter((j) => colorToStatus(j.color) === s).length || 0;
+          const count = filtered.filter((j) => colorToStatus(j.color) === s).length;
           if (count === 0) return null;
           return (
             <Badge
               key={s}
               variant={activeFilter === s ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() =>
-                setActiveFilter(activeFilter === s ? null : s)
-              }
+              onClick={() => setActiveFilter(activeFilter === s ? null : s)}
             >
               {s} ({count})
             </Badge>

@@ -5,7 +5,8 @@ from app.database import get_db
 from app.dependencies import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.auth import UserResponse
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import ResetPasswordRequest, UserCreate, UserUpdate
+from app.services.auth_service import hash_password
 from app.services.user_service import (
     create_user,
     deactivate_user,
@@ -59,10 +60,28 @@ def update_existing_user(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
+    target = get_user_by_id(db, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.role == "admin" and body.is_active is False:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate admin users")
     user = update_user(db, user_id, body)
+    return user
+
+
+@router.put("/{user_id}/reset-password")
+def reset_user_password(
+    user_id: str,
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    user = get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+    user.hashed_password = hash_password(body.new_password)
+    db.commit()
+    return {"ok": True}
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -73,5 +92,9 @@ def deactivate_existing_user(
 ):
     if user_id == current_user.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate your own account")
-    if not deactivate_user(db, user_id):
+    target = get_user_by_id(db, user_id)
+    if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.role == "admin":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate admin users")
+    deactivate_user(db, user_id)
